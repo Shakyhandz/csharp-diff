@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/CsharpDiff.App/CsharpDiff.App.csproj" />
+    <Project Path="src/CsharpDiff.Core/CsharpDiff.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/CsharpDiff.Core.Tests/CsharpDiff.Core.Tests.csproj" />
+  </Folder>
+</Solution>

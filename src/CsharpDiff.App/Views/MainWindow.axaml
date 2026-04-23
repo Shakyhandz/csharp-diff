@@ -1,0 +1,112 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:CsharpDiff.App.ViewModels"
+        xmlns:conv="using:CsharpDiff.App.Converters"
+        xmlns:svc="using:CsharpDiff.App.Services"
+        xmlns:core="using:CsharpDiff.Core"
+        xmlns:ae="clr-namespace:AvaloniaEdit;assembly=AvaloniaEdit"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="700"
+        x:Class="CsharpDiff.App.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="csharp-diff"
+        Width="1200" Height="700">
+
+    <Window.Resources>
+        <conv:StatusGlyphConverter x:Key="StatusGlyph"/>
+        <conv:StatusBrushConverter x:Key="StatusBrush"/>
+    </Window.Resources>
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto">
+        <!-- toolbar row 1 -->
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,*,Auto,Auto,*,Auto" Margin="6,6,6,2">
+            <Button Grid.Column="0" Content="Left…" Click="OnPickLeft" Margin="0,0,4,0"/>
+            <TextBlock Grid.Column="1" Text="{Binding LeftFolder, FallbackValue='(no folder)'}"
+                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="380"/>
+            <Border Grid.Column="2" Width="8"/>
+            <Button Grid.Column="3" Content="Right…" Click="OnPickRight" Margin="0,0,4,0"/>
+            <TextBlock Grid.Column="4" Text="{Binding RightFolder, FallbackValue='(no folder)'}"
+                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="380"/>
+            <Border Grid.Column="5" Width="8"/>
+            <Button Grid.Column="6" Content="Compare" Click="OnCompare"
+                    IsEnabled="{Binding !Busy}"/>
+        </Grid>
+
+        <!-- options row -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="12" Margin="6,2,6,6">
+            <CheckBox Content="Ignore whitespace"  IsChecked="{Binding IgnoreWhitespace}"/>
+            <CheckBox Content="Ignore comments"    IsChecked="{Binding IgnoreComments}"/>
+            <CheckBox Content="Changes only"       IsChecked="{Binding ChangesOnly}"/>
+            <Border Width="16"/>
+            <TextBlock Text="Recent:" VerticalAlignment="Center"/>
+            <ComboBox ItemsSource="{Binding RecentPairs}" MinWidth="320"
+                      SelectionChanged="OnRecentSelected">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="svc:FolderPair">
+                        <TextBlock Text="{Binding Display}"/>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+        </StackPanel>
+
+        <!-- main -->
+        <Grid Grid.Row="2" ColumnDefinitions="320,4,*">
+            <TreeView x:Name="Tree" Grid.Column="0"
+                      ItemsSource="{Binding RootChildren}"
+                      SelectionChanged="OnTreeSelectionChanged"
+                      DoubleTapped="OnTreeDoubleTapped"
+                      ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <TreeView.ItemContainerTheme>
+                    <ControlTheme TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
+                        <Setter Property="IsExpanded" Value="True"/>
+                    </ControlTheme>
+                </TreeView.ItemContainerTheme>
+                <TreeView.ItemTemplate>
+                    <TreeDataTemplate DataType="core:DiffNode" ItemsSource="{Binding Children}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="{Binding Status, Converter={StaticResource StatusGlyph}}"
+                                       FontFamily="Consolas,Menlo,monospace" Width="14"
+                                       Foreground="{Binding Status, Converter={StaticResource StatusBrush}}"/>
+                            <TextBlock Text="{Binding DisplayName}"
+                                       TextWrapping="NoWrap"
+                                       Foreground="{Binding Status, Converter={StaticResource StatusBrush}}"/>
+                        </StackPanel>
+                    </TreeDataTemplate>
+                </TreeView.ItemTemplate>
+            </TreeView>
+
+            <GridSplitter Grid.Column="1" ResizeDirection="Columns" Background="Gray"/>
+
+            <Grid Grid.Column="2" ColumnDefinitions="*,4,*" RowDefinitions="Auto,*">
+                <!-- filename headers -->
+                <Border Grid.Row="0" Grid.Column="0" Padding="6,3" BorderThickness="0,0,0,1" BorderBrush="#40808080">
+                    <TextBlock x:Name="LeftHeader" Text="(no selection)"
+                               FontFamily="Consolas,Menlo,monospace" FontSize="12"
+                               TextTrimming="CharacterEllipsis"/>
+                </Border>
+                <Border Grid.Row="0" Grid.Column="2" Padding="6,3" BorderThickness="0,0,0,1" BorderBrush="#40808080">
+                    <TextBlock x:Name="RightHeader" Text="(no selection)"
+                               FontFamily="Consolas,Menlo,monospace" FontSize="12"
+                               TextTrimming="CharacterEllipsis"/>
+                </Border>
+
+                <!-- editors -->
+                <ae:TextEditor x:Name="LeftEditor" Grid.Row="1" Grid.Column="0"
+                               IsReadOnly="True" ShowLineNumbers="True"
+                               FontFamily="Consolas,Menlo,monospace" FontSize="13"
+                               Background="White" Foreground="Black"/>
+                <GridSplitter Grid.Row="1" Grid.Column="1" ResizeDirection="Columns" Background="Gray"/>
+                <ae:TextEditor x:Name="RightEditor" Grid.Row="1" Grid.Column="2"
+                               IsReadOnly="True" ShowLineNumbers="True"
+                               FontFamily="Consolas,Menlo,monospace" FontSize="13"
+                               Background="White" Foreground="Black"/>
+            </Grid>
+        </Grid>
+
+        <!-- status bar -->
+        <Border Grid.Row="3" BorderThickness="0,1,0,0" BorderBrush="#40808080" Padding="6,3">
+            <TextBlock Text="{Binding Status, FallbackValue='Ready.'}"/>
+        </Border>
+    </Grid>
+</Window>
