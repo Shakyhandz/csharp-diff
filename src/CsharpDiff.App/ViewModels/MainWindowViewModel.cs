@@ -14,6 +14,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private string? _status;
     [ObservableProperty] private bool _busy;
 
+    [ObservableProperty] private bool _ignoreUsingOrder = true;
     [ObservableProperty] private bool _ignoreWhitespace = true;
     [ObservableProperty] private bool _ignoreComments = true;
     [ObservableProperty] private bool _changesOnly;
@@ -43,6 +44,7 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     partial void OnChangesOnlyChanged(bool value) => RefreshFilteredTree();
+    partial void OnIgnoreUsingOrderChanged(bool value) => _ = RecomputeIfReadyAsync();
     partial void OnIgnoreWhitespaceChanged(bool value) => _ = RecomputeIfReadyAsync();
     partial void OnIgnoreCommentsChanged(bool value) => _ = RecomputeIfReadyAsync();
 
@@ -64,6 +66,7 @@ public partial class MainWindowViewModel : ViewModelBase
             var left = LeftFolder!;
             var right = RightFolder!;
             var options = new DiffOptions(
+                IgnoreUsingOrder: IgnoreUsingOrder,
                 IgnoreWhitespace: IgnoreWhitespace,
                 IgnoreComments: IgnoreComments);
 

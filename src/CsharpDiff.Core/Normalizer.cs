@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace CsharpDiff.Core;
 
 public sealed record DiffOptions(
+    bool IgnoreUsingOrder = true,
     bool IgnoreWhitespace = true,
     bool IgnoreComments = true)
 {
@@ -21,6 +22,9 @@ public static class Normalizer
 
         if (options.IgnoreComments)
             working = (SyntaxNode)new TriviaStripper().Visit(working)!;
+
+        if (options.IgnoreUsingOrder)
+            working = (SyntaxNode)new UsingSorter().Visit(working)!;
 
         if (options.IgnoreWhitespace)
             working = working.NormalizeWhitespace();
@@ -66,5 +70,29 @@ public static class Normalizer
                 _ => trivia
             };
         }
+    }
+
+    private sealed class UsingSorter : CSharpSyntaxRewriter
+    {
+        public override SyntaxNode? VisitCompilationUnit(CompilationUnitSyntax node)
+        {
+            var visited = (CompilationUnitSyntax)base.VisitCompilationUnit(node)!;
+            return visited.Usings.Count <= 1 ? visited : visited.WithUsings(Sort(visited.Usings));
+        }
+
+        public override SyntaxNode? VisitNamespaceDeclaration(NamespaceDeclarationSyntax node)
+        {
+            var visited = (NamespaceDeclarationSyntax)base.VisitNamespaceDeclaration(node)!;
+            return visited.Usings.Count <= 1 ? visited : visited.WithUsings(Sort(visited.Usings));
+        }
+
+        public override SyntaxNode? VisitFileScopedNamespaceDeclaration(FileScopedNamespaceDeclarationSyntax node)
+        {
+            var visited = (FileScopedNamespaceDeclarationSyntax)base.VisitFileScopedNamespaceDeclaration(node)!;
+            return visited.Usings.Count <= 1 ? visited : visited.WithUsings(Sort(visited.Usings));
+        }
+
+        private static SyntaxList<UsingDirectiveSyntax> Sort(SyntaxList<UsingDirectiveSyntax> list) =>
+            SyntaxFactory.List(list.OrderBy(u => u.ToString(), StringComparer.Ordinal));
     }
 }
