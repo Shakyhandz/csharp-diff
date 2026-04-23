@@ -135,6 +135,89 @@ public class ProjectDiffTests : IDisposable
     }
 
     [Fact]
+    public void Reordered_usings_are_unchanged_when_ignore_using_order_is_on()
+    {
+        WriteLeft("a.cs", """
+            using System;
+            using System.IO;
+            using System.Linq;
+            namespace N;
+            public class C { public void M() { } }
+            """);
+        WriteRight("a.cs", """
+            using System.Linq;
+            using System;
+            using System.IO;
+            namespace N;
+            public class C { public void M() { } }
+            """);
+
+        var root = ProjectDiff.Compare(_left, _right);
+        var file = FindFile(root, "a.cs");
+        Assert.NotNull(file);
+        Assert.Equal(DiffStatus.Unchanged, file!.Status);
+    }
+
+    [Fact]
+    public void Reordered_usings_are_modified_when_ignore_using_order_is_off()
+    {
+        WriteLeft("a.cs", """
+            using System;
+            using System.IO;
+            namespace N;
+            public class C { public void M() { } }
+            """);
+        WriteRight("a.cs", """
+            using System.IO;
+            using System;
+            namespace N;
+            public class C { public void M() { } }
+            """);
+
+        var opts = new DiffOptions(IgnoreUsingOrder: false);
+        var root = ProjectDiff.Compare(_left, _right, opts);
+        var file = FindFile(root, "a.cs");
+        Assert.NotNull(file);
+        Assert.Equal(DiffStatus.Modified, file!.Status);
+    }
+
+    [Fact]
+    public void Same_relative_path_is_matched_before_symbol_overlap()
+    {
+        // Left has two files with identical symbols; right has one at a matching
+        // relative path. Path-priority matching must pair the right file with
+        // Services/User.cs (not Archive/User.cs), and leave Archive/User.cs orphaned.
+        WriteLeft("Services/User.cs", "namespace N; public class User { public int Id { get; set; } }");
+        WriteLeft("Archive/User.cs",  "namespace N; public class User { public int Id { get; set; } }");
+        WriteRight("Services/User.cs", "namespace N; public class User { public int Id { get; set; } public string Name { get; set; } }");
+
+        var root = ProjectDiff.Compare(_left, _right);
+        var services = FindFileByLeftPath(root, Path.Combine("Services", "User.cs"));
+        var archive = FindFileByLeftPath(root, Path.Combine("Archive", "User.cs"));
+
+        Assert.NotNull(services);
+        Assert.EndsWith(Path.Combine("Services", "User.cs"), services!.RightFilePath);
+        Assert.Equal(DiffStatus.Modified, services.Status);
+
+        Assert.NotNull(archive);
+        Assert.Null(archive!.RightFilePath);
+        Assert.Equal(DiffStatus.Removed, archive.Status);
+    }
+
+    private static DiffNode? FindFileByLeftPath(DiffNode root, string relativeSuffix)
+    {
+        if (root.Kind == NodeKind.File && root.LeftFilePath is not null
+            && root.LeftFilePath.EndsWith(relativeSuffix, StringComparison.OrdinalIgnoreCase))
+            return root;
+        foreach (var c in root.Children)
+        {
+            var hit = FindFileByLeftPath(c, relativeSuffix);
+            if (hit is not null) return hit;
+        }
+        return null;
+    }
+
+    [Fact]
     public void Rename_with_same_content_matches_via_symbol_overlap()
     {
         WriteLeft("old-name.cs", "namespace N; public class UniqueClass { public void Foo() { } public int Bar() => 1; }");
