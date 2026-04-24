@@ -5,7 +5,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace CsharpDiff.Core;
 
 public sealed record DiffOptions(
-    bool IgnoreUsingOrder = true,
+    bool IgnoreUsings = true,
     bool IgnoreWhitespace = true,
     bool IgnoreComments = true)
 {
@@ -14,6 +14,18 @@ public sealed record DiffOptions(
 
 public static class Normalizer
 {
+    /// Parse and normalize a raw C# file's text according to options.
+    /// Returns empty when input is empty. If no option is on, input is returned as-is.
+    public static string NormalizeText(string text, DiffOptions options)
+    {
+        if (string.IsNullOrEmpty(text)) return text ?? string.Empty;
+        if (!(options.IgnoreUsings || options.IgnoreWhitespace || options.IgnoreComments))
+            return text;
+
+        var tree = CSharpSyntaxTree.ParseText(text);
+        return Normalize(tree.GetRoot(), options);
+    }
+
     /// Return text of a declaration, normalized according to options.
     /// Used for equality comparison, not for display.
     public static string Normalize(SyntaxNode node, DiffOptions options)
@@ -23,8 +35,8 @@ public static class Normalizer
         if (options.IgnoreComments)
             working = (SyntaxNode)new TriviaStripper().Visit(working)!;
 
-        if (options.IgnoreUsingOrder)
-            working = (SyntaxNode)new UsingSorter().Visit(working)!;
+        if (options.IgnoreUsings)
+            working = (SyntaxNode)new UsingRemover().Visit(working)!;
 
         if (options.IgnoreWhitespace)
             working = working.NormalizeWhitespace();
@@ -72,27 +84,17 @@ public static class Normalizer
         }
     }
 
-    private sealed class UsingSorter : CSharpSyntaxRewriter
+    private sealed class UsingRemover : CSharpSyntaxRewriter
     {
-        public override SyntaxNode? VisitCompilationUnit(CompilationUnitSyntax node)
-        {
-            var visited = (CompilationUnitSyntax)base.VisitCompilationUnit(node)!;
-            return visited.Usings.Count <= 1 ? visited : visited.WithUsings(Sort(visited.Usings));
-        }
+        private static readonly SyntaxList<UsingDirectiveSyntax> Empty = SyntaxFactory.List<UsingDirectiveSyntax>();
 
-        public override SyntaxNode? VisitNamespaceDeclaration(NamespaceDeclarationSyntax node)
-        {
-            var visited = (NamespaceDeclarationSyntax)base.VisitNamespaceDeclaration(node)!;
-            return visited.Usings.Count <= 1 ? visited : visited.WithUsings(Sort(visited.Usings));
-        }
+        public override SyntaxNode? VisitCompilationUnit(CompilationUnitSyntax node) =>
+            base.VisitCompilationUnit(node.WithUsings(Empty));
 
-        public override SyntaxNode? VisitFileScopedNamespaceDeclaration(FileScopedNamespaceDeclarationSyntax node)
-        {
-            var visited = (FileScopedNamespaceDeclarationSyntax)base.VisitFileScopedNamespaceDeclaration(node)!;
-            return visited.Usings.Count <= 1 ? visited : visited.WithUsings(Sort(visited.Usings));
-        }
+        public override SyntaxNode? VisitNamespaceDeclaration(NamespaceDeclarationSyntax node) =>
+            base.VisitNamespaceDeclaration(node.WithUsings(Empty));
 
-        private static SyntaxList<UsingDirectiveSyntax> Sort(SyntaxList<UsingDirectiveSyntax> list) =>
-            SyntaxFactory.List(list.OrderBy(u => u.ToString(), StringComparer.Ordinal));
+        public override SyntaxNode? VisitFileScopedNamespaceDeclaration(FileScopedNamespaceDeclarationSyntax node) =>
+            base.VisitFileScopedNamespaceDeclaration(node.WithUsings(Empty));
     }
 }

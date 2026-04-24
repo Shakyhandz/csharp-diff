@@ -8,10 +8,10 @@ using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using AvaloniaEdit;
 using AvaloniaEdit.Document;
+using CsharpDiff.Core;
 using CsharpDiff.App.Rendering;
 using CsharpDiff.App.Services;
 using CsharpDiff.App.ViewModels;
-using CsharpDiff.Core;
 
 namespace CsharpDiff.App.Views;
 
@@ -23,10 +23,28 @@ public partial class MainWindow : Window
     private ScrollViewer? _leftSv;
     private ScrollViewer? _rightSv;
 
+    private DiffNode? _currentNode;
+
     public MainWindow()
     {
         InitializeComponent();
         Opened += OnOpened;
+        DataContextChanged += (_, __) =>
+        {
+            if (DataContext is MainWindowViewModel vm)
+            {
+                vm.PropertyChanged += (_, e) =>
+                {
+                    if (e.PropertyName is nameof(vm.IgnoreUsings)
+                        or nameof(vm.IgnoreWhitespace)
+                        or nameof(vm.IgnoreComments)
+                        or nameof(vm.NormalizeView))
+                    {
+                        ShowNode(_currentNode);
+                    }
+                };
+            }
+        };
     }
 
     private void OnOpened(object? sender, EventArgs e)
@@ -76,8 +94,8 @@ public partial class MainWindow : Window
     private void OnTreeSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (sender is not TreeView tv) return;
-        var node = tv.SelectedItem as DiffNode;
-        ShowNode(node);
+        _currentNode = tv.SelectedItem as DiffNode;
+        ShowNode(_currentNode);
     }
 
     private void ShowNode(DiffNode? node)
@@ -102,8 +120,27 @@ public partial class MainWindow : Window
             return;
         }
 
-        var left = node.LeftText ?? "";
-        var right = node.RightText ?? "";
+        var vm = DataContext as MainWindowViewModel;
+        var options = new DiffOptions(
+            IgnoreUsings: vm?.IgnoreUsings ?? false,
+            IgnoreWhitespace: vm?.IgnoreWhitespace ?? false,
+            IgnoreComments: vm?.IgnoreComments ?? false);
+        var normalizeView = vm?.NormalizeView ?? true;
+
+        string left, right;
+        if (normalizeView)
+        {
+            // Display-canonical form — editor and diff both use normalized text.
+            left = Normalizer.NormalizeText(node.LeftText ?? "", options);
+            right = Normalizer.NormalizeText(node.RightText ?? "", options);
+        }
+        else
+        {
+            // Preserve original file text; highlight suppression handled below.
+            left = node.LeftText ?? "";
+            right = node.RightText ?? "";
+        }
+
         leftEditor.Document = new TextDocument(left);
         rightEditor.Document = new TextDocument(right);
 
@@ -115,7 +152,12 @@ public partial class MainWindow : Window
         leftHeader.Foreground = node.LeftFilePath is null ? Brushes.Gray : brush;
         rightHeader.Foreground = node.RightFilePath is null ? Brushes.Gray : brush;
 
-        var result = LineDiffer.Compute(left, right);
+        // When preserving original text, apply surgical suppression via flags.
+        var result = normalizeView
+            ? LineDiffer.Compute(left, right)
+            : LineDiffer.Compute(left, right,
+                ignoreUsings: options.IgnoreUsings,
+                ignoreWhitespace: options.IgnoreWhitespace);
         _leftRenderer.SetMarks(result.LeftMarks);
         _rightRenderer.SetMarks(result.RightMarks);
         leftEditor.TextArea.TextView.InvalidateVisual();

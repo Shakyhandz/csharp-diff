@@ -35,10 +35,12 @@
 
         <!-- options row -->
         <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="12" Margin="6,2,6,6">
-            <CheckBox Content="Ignore using order" IsChecked="{Binding IgnoreUsingOrder}"/>
+            <CheckBox Content="Ignore usings"      IsChecked="{Binding IgnoreUsings}"/>
             <CheckBox Content="Ignore whitespace"  IsChecked="{Binding IgnoreWhitespace}"/>
             <CheckBox Content="Ignore comments"    IsChecked="{Binding IgnoreComments}"/>
             <CheckBox Content="Changes only"       IsChecked="{Binding ChangesOnly}"/>
+            <CheckBox Content="Normalize view"     IsChecked="{Binding NormalizeView}"
+                      ToolTip.Tip="On: rewrites the file view to match ignore options (reformatted, no usings, etc). Off: shows original file content with highlights suppressed on ignored lines."/>
             <Border Width="16"/>
             <TextBlock Text="Recent:" VerticalAlignment="Center"/>
             <ComboBox ItemsSource="{Binding RecentPairs}" MinWidth="320"

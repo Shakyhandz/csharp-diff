@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using CsharpDiff.Core;
 using DiffPlex.DiffBuilder;
 using DiffPlex.DiffBuilder.Model;
 
@@ -8,12 +9,13 @@ public static class LineDiffer
 {
     public sealed record Result(IReadOnlyList<LineMark> LeftMarks, IReadOnlyList<LineMark> RightMarks);
 
-    public static Result Compute(string? left, string? right)
+    public static Result Compute(string? left, string? right,
+        bool ignoreUsings = false, bool ignoreWhitespace = false)
     {
         left ??= string.Empty;
         right ??= string.Empty;
 
-        var model = SideBySideDiffBuilder.Diff(left, right);
+        var model = SideBySideDiffBuilder.Diff(left, right, ignoreWhiteSpace: ignoreWhitespace);
 
         var leftMarks = new List<LineMark>();
         foreach (var line in model.OldText.Lines)
@@ -41,6 +43,20 @@ public static class LineDiffer
             });
         }
 
+        if (ignoreUsings)
+        {
+            MaskUsings(left, leftMarks);
+            MaskUsings(right, rightMarks);
+        }
+
         return new Result(leftMarks, rightMarks);
+    }
+
+    private static void MaskUsings(string text, List<LineMark> marks)
+    {
+        var usingLines = UsingScanner.FindUsingLines(text);
+        foreach (var line in usingLines)
+            if (line >= 0 && line < marks.Count)
+                marks[line] = LineMark.None;
     }
 }

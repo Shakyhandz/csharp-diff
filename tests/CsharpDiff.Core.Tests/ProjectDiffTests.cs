@@ -135,8 +135,9 @@ public class ProjectDiffTests : IDisposable
     }
 
     [Fact]
-    public void Reordered_usings_are_unchanged_when_ignore_using_order_is_on()
+    public void Different_usings_are_unchanged_when_ignore_usings_is_on()
     {
+        // Totally different using sets — option-on should still treat file as unchanged.
         WriteLeft("a.cs", """
             using System;
             using System.IO;
@@ -145,9 +146,7 @@ public class ProjectDiffTests : IDisposable
             public class C { public void M() { } }
             """);
         WriteRight("a.cs", """
-            using System.Linq;
-            using System;
-            using System.IO;
+            using System.Text.Json;
             namespace N;
             public class C { public void M() { } }
             """);
@@ -159,26 +158,44 @@ public class ProjectDiffTests : IDisposable
     }
 
     [Fact]
-    public void Reordered_usings_are_modified_when_ignore_using_order_is_off()
+    public void Different_usings_are_modified_when_ignore_usings_is_off()
     {
         WriteLeft("a.cs", """
             using System;
-            using System.IO;
             namespace N;
             public class C { public void M() { } }
             """);
         WriteRight("a.cs", """
             using System.IO;
-            using System;
             namespace N;
             public class C { public void M() { } }
             """);
 
-        var opts = new DiffOptions(IgnoreUsingOrder: false);
+        var opts = new DiffOptions(IgnoreUsings: false);
         var root = ProjectDiff.Compare(_left, _right, opts);
         var file = FindFile(root, "a.cs");
         Assert.NotNull(file);
         Assert.Equal(DiffStatus.Modified, file!.Status);
+    }
+
+    [Fact]
+    public void UsingScanner_finds_using_directive_lines()
+    {
+        var text = """
+            using System;
+            using System.IO;
+
+            namespace N;
+            public class C
+            {
+                public void M() { }
+            }
+            """;
+        var lines = UsingScanner.FindUsingLines(text);
+        Assert.Contains(0, lines);
+        Assert.Contains(1, lines);
+        Assert.DoesNotContain(3, lines); // namespace N;
+        Assert.DoesNotContain(4, lines); // public class C
     }
 
     [Fact]
