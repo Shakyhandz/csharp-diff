@@ -19,6 +19,8 @@ public partial class MainWindow : Window
 {
     private readonly DiffLineBackgroundRenderer _leftRenderer = new();
     private readonly DiffLineBackgroundRenderer _rightRenderer = new();
+    private readonly GapAwareLineNumberMargin _leftMargin = new();
+    private readonly GapAwareLineNumberMargin _rightMargin = new();
     private bool _syncingScroll;
     private ScrollViewer? _leftSv;
     private ScrollViewer? _rightSv;
@@ -55,6 +57,8 @@ public partial class MainWindow : Window
         rightEditor.Options.HighlightCurrentLine = false;
         leftEditor.TextArea.TextView.BackgroundRenderers.Add(_leftRenderer);
         rightEditor.TextArea.TextView.BackgroundRenderers.Add(_rightRenderer);
+        leftEditor.TextArea.LeftMargins.Insert(0, _leftMargin);
+        rightEditor.TextArea.LeftMargins.Insert(0, _rightMargin);
 
         leftEditor.TemplateApplied += (_, __) => WireScrollSync(leftEditor, rightEditor);
         rightEditor.TemplateApplied += (_, __) => WireScrollSync(leftEditor, rightEditor);
@@ -115,6 +119,8 @@ public partial class MainWindow : Window
             rightHeader.Foreground = Brushes.Gray;
             _leftRenderer.SetMarks(System.Array.Empty<LineMark>());
             _rightRenderer.SetMarks(System.Array.Empty<LineMark>());
+            _leftMargin.SetMap(System.Array.Empty<int>());
+            _rightMargin.SetMap(System.Array.Empty<int>());
             leftEditor.TextArea.TextView.InvalidateVisual();
             rightEditor.TextArea.TextView.InvalidateVisual();
             return;
@@ -141,8 +147,14 @@ public partial class MainWindow : Window
             right = node.RightText ?? "";
         }
 
-        leftEditor.Document = new TextDocument(left);
-        rightEditor.Document = new TextDocument(right);
+        var result = normalizeView
+            ? LineDiffer.Compute(left, right)
+            : LineDiffer.Compute(left, right,
+                ignoreUsings: options.IgnoreUsings,
+                ignoreWhitespace: options.IgnoreWhitespace);
+
+        leftEditor.Document = new TextDocument(result.LeftAligned);
+        rightEditor.Document = new TextDocument(result.RightAligned);
 
         leftHeader.Text = node.LeftFilePath ?? "(no match)";
         rightHeader.Text = node.RightFilePath ?? "(no match)";
@@ -152,14 +164,10 @@ public partial class MainWindow : Window
         leftHeader.Foreground = node.LeftFilePath is null ? Brushes.Gray : brush;
         rightHeader.Foreground = node.RightFilePath is null ? Brushes.Gray : brush;
 
-        // When preserving original text, apply surgical suppression via flags.
-        var result = normalizeView
-            ? LineDiffer.Compute(left, right)
-            : LineDiffer.Compute(left, right,
-                ignoreUsings: options.IgnoreUsings,
-                ignoreWhitespace: options.IgnoreWhitespace);
         _leftRenderer.SetMarks(result.LeftMarks);
         _rightRenderer.SetMarks(result.RightMarks);
+        _leftMargin.SetMap(result.LeftLineNumbers);
+        _rightMargin.SetMap(result.RightLineNumbers);
         leftEditor.TextArea.TextView.InvalidateVisual();
         rightEditor.TextArea.TextView.InvalidateVisual();
     }

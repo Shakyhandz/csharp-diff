@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text;
 using CsharpDiff.Core;
 using DiffPlex.DiffBuilder;
 using DiffPlex.DiffBuilder.Model;
@@ -7,7 +8,13 @@ namespace CsharpDiff.App.Rendering;
 
 public static class LineDiffer
 {
-    public sealed record Result(IReadOnlyList<LineMark> LeftMarks, IReadOnlyList<LineMark> RightMarks);
+    public sealed record Result(
+        string LeftAligned,
+        string RightAligned,
+        IReadOnlyList<LineMark> LeftMarks,
+        IReadOnlyList<LineMark> RightMarks,
+        IReadOnlyList<int> LeftLineNumbers,
+        IReadOnlyList<int> RightLineNumbers);
 
     public static Result Compute(string? left, string? right,
         bool ignoreUsings = false, bool ignoreWhitespace = false)
@@ -17,46 +24,87 @@ public static class LineDiffer
 
         var model = SideBySideDiffBuilder.Diff(left, right, ignoreWhiteSpace: ignoreWhitespace);
 
+        var leftText = new StringBuilder();
+        var rightText = new StringBuilder();
         var leftMarks = new List<LineMark>();
-        foreach (var line in model.OldText.Lines)
-        {
-            if (line.Type == ChangeType.Imaginary) continue;
-            leftMarks.Add(line.Type switch
-            {
-                ChangeType.Deleted => LineMark.Removed,
-                ChangeType.Modified => LineMark.Changed,
-                ChangeType.Inserted => LineMark.Added,
-                _ => LineMark.None,
-            });
-        }
-
         var rightMarks = new List<LineMark>();
-        foreach (var line in model.NewText.Lines)
+        var leftNums = new List<int>();
+        var rightNums = new List<int>();
+
+        var leftOrig = 0;
+        var rightOrig = 0;
+        var rowCount = System.Math.Max(model.OldText.Lines.Count, model.NewText.Lines.Count);
+
+        for (var i = 0; i < rowCount; i++)
         {
-            if (line.Type == ChangeType.Imaginary) continue;
-            rightMarks.Add(line.Type switch
+            var l = i < model.OldText.Lines.Count ? model.OldText.Lines[i] : null;
+            var r = i < model.NewText.Lines.Count ? model.NewText.Lines[i] : null;
+
+            if (i > 0) { leftText.Append('\n'); rightText.Append('\n'); }
+
+            if (l is null || l.Type == ChangeType.Imaginary)
             {
-                ChangeType.Inserted => LineMark.Added,
-                ChangeType.Modified => LineMark.Changed,
-                ChangeType.Deleted => LineMark.Removed,
-                _ => LineMark.None,
-            });
+                leftMarks.Add(LineMark.Gap);
+                leftNums.Add(0);
+            }
+            else
+            {
+                leftText.Append(l.Text);
+                leftOrig++;
+                leftNums.Add(leftOrig);
+                leftMarks.Add(l.Type switch
+                {
+                    ChangeType.Deleted => LineMark.Removed,
+                    ChangeType.Modified => LineMark.Changed,
+                    ChangeType.Inserted => LineMark.Added,
+                    _ => LineMark.None,
+                });
+            }
+
+            if (r is null || r.Type == ChangeType.Imaginary)
+            {
+                rightMarks.Add(LineMark.Gap);
+                rightNums.Add(0);
+            }
+            else
+            {
+                rightText.Append(r.Text);
+                rightOrig++;
+                rightNums.Add(rightOrig);
+                rightMarks.Add(r.Type switch
+                {
+                    ChangeType.Inserted => LineMark.Added,
+                    ChangeType.Modified => LineMark.Changed,
+                    ChangeType.Deleted => LineMark.Removed,
+                    _ => LineMark.None,
+                });
+            }
         }
 
         if (ignoreUsings)
         {
-            MaskUsings(left, leftMarks);
-            MaskUsings(right, rightMarks);
+            MaskUsings(left, leftMarks, leftNums);
+            MaskUsings(right, rightMarks, rightNums);
         }
 
-        return new Result(leftMarks, rightMarks);
+        return new Result(
+            leftText.ToString(),
+            rightText.ToString(),
+            leftMarks,
+            rightMarks,
+            leftNums,
+            rightNums);
     }
 
-    private static void MaskUsings(string text, List<LineMark> marks)
+    private static void MaskUsings(string text, List<LineMark> marks, List<int> origLineNumbers)
     {
         var usingLines = UsingScanner.FindUsingLines(text);
-        foreach (var line in usingLines)
-            if (line >= 0 && line < marks.Count)
-                marks[line] = LineMark.None;
+        if (usingLines.Count == 0) return;
+        for (var i = 0; i < marks.Count; i++)
+        {
+            var orig = origLineNumbers[i];
+            if (orig > 0 && usingLines.Contains(orig - 1))
+                marks[i] = LineMark.None;
+        }
     }
 }

@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using Avalonia;
 using Avalonia.Media;
-using AvaloniaEdit.Document;
 using AvaloniaEdit.Rendering;
 
 namespace CsharpDiff.App.Rendering;
@@ -12,6 +11,7 @@ public enum LineMark
     Added,
     Removed,
     Changed,
+    Gap,
 }
 
 public sealed class DiffLineBackgroundRenderer : IBackgroundRenderer
@@ -20,10 +20,31 @@ public sealed class DiffLineBackgroundRenderer : IBackgroundRenderer
 
     public KnownLayer Layer => KnownLayer.Background;
 
-    // Subtle, readable on both light and dark themes.
     private static readonly IBrush AddedBrush = new SolidColorBrush(Color.FromArgb(0x40, 0x00, 0xC0, 0x40));
     private static readonly IBrush RemovedBrush = new SolidColorBrush(Color.FromArgb(0x40, 0xE0, 0x40, 0x40));
     private static readonly IBrush ChangedBrush = new SolidColorBrush(Color.FromArgb(0x40, 0xFF, 0xC8, 0x00));
+    private static readonly IBrush GapBrush = BuildGapBrush();
+
+    private static IBrush BuildGapBrush()
+    {
+        var geom = new DrawingGroup();
+        using (var ctx = geom.Open())
+        {
+            var bg = new SolidColorBrush(Color.FromArgb(0x30, 0x80, 0x80, 0x80));
+            var stripe = new SolidColorBrush(Color.FromArgb(0x28, 0x80, 0x80, 0x80));
+            ctx.DrawRectangle(bg, null, new Rect(0, 0, 8, 8));
+            var pen = new Pen(stripe, 2);
+            ctx.DrawLine(pen, new Point(-2, 8), new Point(8, -2));
+            ctx.DrawLine(pen, new Point(0, 10), new Point(10, 0));
+        }
+        return new DrawingBrush
+        {
+            Drawing = geom,
+            TileMode = TileMode.Tile,
+            SourceRect = new RelativeRect(0, 0, 8, 8, RelativeUnit.Absolute),
+            DestinationRect = new RelativeRect(0, 0, 8, 8, RelativeUnit.Absolute),
+        };
+    }
 
     public void SetMarks(IReadOnlyList<LineMark> marks)
     {
@@ -46,6 +67,7 @@ public sealed class DiffLineBackgroundRenderer : IBackgroundRenderer
                 LineMark.Added => AddedBrush,
                 LineMark.Removed => RemovedBrush,
                 LineMark.Changed => ChangedBrush,
+                LineMark.Gap => GapBrush,
                 _ => null,
             };
             if (brush is null) continue;

@@ -102,12 +102,12 @@
 
                 <!-- editors -->
                 <ae:TextEditor x:Name="LeftEditor" Grid.Row="2" Grid.Column="0"
-                               IsReadOnly="True" ShowLineNumbers="True"
+                               IsReadOnly="True"
                                FontFamily="Consolas,Menlo,monospace" FontSize="13"
                                Background="White" Foreground="Black"/>
                 <GridSplitter Grid.Row="0" Grid.RowSpan="3" Grid.Column="1" ResizeDirection="Columns" Background="Gray"/>
                 <ae:TextEditor x:Name="RightEditor" Grid.Row="2" Grid.Column="2"
-                               IsReadOnly="True" ShowLineNumbers="True"
+                               IsReadOnly="True"
                                FontFamily="Consolas,Menlo,monospace" FontSize="13"
                                Background="White" Foreground="Black"/>
             </Grid>
