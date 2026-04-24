@@ -49,6 +49,10 @@ into side-by-side AvaloniaEdit panes when a file is selected.
 
 ## Conventions
 
+- **Never commit unless explicitly told.** Do not run `git commit`,
+  `git push`, or stage changes on your own — wait for the user to
+  say so. Writing/editing files is fine; turning that into history
+  is not.
 - **Core has no UI dependency.** Anything touching Avalonia/DiffPlex
   belongs in App.
 - **Normalization lives in Core**, called from both the equality check
