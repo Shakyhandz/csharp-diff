@@ -21,9 +21,14 @@ public static class ProjectDiff
 
         var pairs = FileMatcher.Match(leftFprints, rightFprints);
 
+        var leftProjDirs = ProjectLoader.FindProjectDirectories(leftFolder);
+        var rightProjDirs = ProjectLoader.FindProjectDirectories(rightFolder);
+        var projectDirs = new HashSet<string>(leftProjDirs, System.StringComparer.OrdinalIgnoreCase);
+        projectDirs.UnionWith(rightProjDirs);
+
         var root = new DiffNode
         {
-            Kind = NodeKind.Folder,
+            Kind = projectDirs.Contains("") ? NodeKind.Project : NodeKind.Folder,
             DisplayName = "<root>",
             Key = "",
         };
@@ -40,7 +45,7 @@ public static class ProjectDiff
 
             var relPath = pair.Left.RelativePath;
             var folderRel = Path.GetDirectoryName(relPath) ?? "";
-            var folderNode = EnsureFolder(folderRel.Replace('\\', '/'), folderIndex, root);
+            var folderNode = EnsureFolder(folderRel.Replace('\\', '/'), folderIndex, root, projectDirs);
 
             var fileNode = BuildFileNode(pair, options);
             folderNode.Children.Add(fileNode);
@@ -61,11 +66,12 @@ public static class ProjectDiff
             {
                 [""] = addedRoot,
             };
+            var emptyProjDirs = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
             foreach (var pair in addedPairs)
             {
                 var relPath = pair.Right!.RelativePath;
                 var folderRel = Path.GetDirectoryName(relPath) ?? "";
-                var folderNode = EnsureFolder(folderRel.Replace('\\', '/'), addedIndex, addedRoot);
+                var folderNode = EnsureFolder(folderRel.Replace('\\', '/'), addedIndex, addedRoot, emptyProjDirs);
                 folderNode.Children.Add(BuildFileNode(pair, options));
             }
             root.Children.Add(addedRoot);
@@ -113,18 +119,19 @@ public static class ProjectDiff
         catch { return ""; }
     }
 
-    private static DiffNode EnsureFolder(string relFolder, Dictionary<string, DiffNode> index, DiffNode root)
+    private static DiffNode EnsureFolder(string relFolder, Dictionary<string, DiffNode> index, DiffNode root, HashSet<string> projectDirs)
     {
         if (index.TryGetValue(relFolder, out var existing)) return existing;
 
         var lastSlash = relFolder.LastIndexOf('/');
         var parentRel = lastSlash < 0 ? "" : relFolder[..lastSlash];
-        var parent = EnsureFolder(parentRel, index, root);
+        var parent = EnsureFolder(parentRel, index, root, projectDirs);
 
         var display = lastSlash < 0 ? relFolder : relFolder[(lastSlash + 1)..];
+        var kind = projectDirs.Contains(relFolder) ? NodeKind.Project : NodeKind.Folder;
         var node = new DiffNode
         {
-            Kind = NodeKind.Folder,
+            Kind = kind,
             DisplayName = display,
             Key = "folder:" + relFolder,
         };

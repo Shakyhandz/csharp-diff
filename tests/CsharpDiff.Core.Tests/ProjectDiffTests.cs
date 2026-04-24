@@ -1,4 +1,5 @@
 using CsharpDiff.Core;
+using System.Linq;
 using Xunit;
 
 namespace CsharpDiff.Core.Tests;
@@ -232,6 +233,27 @@ public class ProjectDiffTests : IDisposable
             if (hit is not null) return hit;
         }
         return null;
+    }
+
+    [Fact]
+    public void Folder_with_csproj_is_tagged_as_project()
+    {
+        WriteLeft("ProjA/ProjA.csproj", "<Project Sdk=\"Microsoft.NET.Sdk\" />");
+        WriteLeft("ProjA/Foo.cs", "namespace N; public class Foo { }");
+        WriteLeft("PlainDir/Bar.cs", "namespace N; public class Bar { }");
+
+        WriteRight("ProjA/ProjA.csproj", "<Project Sdk=\"Microsoft.NET.Sdk\" />");
+        WriteRight("ProjA/Foo.cs", "namespace N; public class Foo { }");
+        WriteRight("PlainDir/Bar.cs", "namespace N; public class Bar { }");
+
+        var root = ProjectDiff.Compare(_left, _right);
+        var projA = root.Children.FirstOrDefault(c => c.DisplayName == "ProjA");
+        var plain = root.Children.FirstOrDefault(c => c.DisplayName == "PlainDir");
+
+        Assert.NotNull(projA);
+        Assert.NotNull(plain);
+        Assert.Equal(NodeKind.Project, projA!.Kind);
+        Assert.Equal(NodeKind.Folder, plain!.Kind);
     }
 
     [Fact]

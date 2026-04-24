@@ -22,6 +22,21 @@ public static class ProjectLoader
         return trees;
     }
 
+    public static HashSet<string> FindProjectDirectories(string folder)
+    {
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (!Directory.Exists(folder)) return result;
+
+        foreach (var csproj in EnumerateFilesFiltered(folder, "*.csproj"))
+        {
+            var dir = Path.GetDirectoryName(csproj) ?? folder;
+            var rel = Path.GetRelativePath(folder, dir).Replace('\\', '/');
+            if (rel == ".") rel = "";
+            result.Add(rel);
+        }
+        return result;
+    }
+
     private static IEnumerable<string> EnumerateCsFiles(string root)
     {
         var stack = new Stack<string>();
@@ -36,6 +51,24 @@ public static class ProjectLoader
                 stack.Push(sub);
             }
             foreach (var file in Directory.EnumerateFiles(dir, "*.cs"))
+                yield return file;
+        }
+    }
+
+    private static IEnumerable<string> EnumerateFilesFiltered(string root, string pattern)
+    {
+        var stack = new Stack<string>();
+        stack.Push(root);
+        while (stack.Count > 0)
+        {
+            var dir = stack.Pop();
+            foreach (var sub in Directory.EnumerateDirectories(dir))
+            {
+                var name = Path.GetFileName(sub);
+                if (ExcludedDirs.Contains(name, StringComparer.OrdinalIgnoreCase)) continue;
+                stack.Push(sub);
+            }
+            foreach (var file in Directory.EnumerateFiles(dir, pattern))
                 yield return file;
         }
     }
