@@ -15,6 +15,7 @@
     <Window.Resources>
         <conv:StatusGlyphConverter x:Key="StatusGlyph"/>
         <conv:StatusBrushConverter x:Key="StatusBrush"/>
+        <conv:NodeKindGlyphConverter x:Key="NodeKindGlyph"/>
     </Window.Resources>
 
     <Grid RowDefinitions="Auto,Auto,*,Auto">
@@ -70,6 +71,8 @@
                             <TextBlock Text="{Binding Status, Converter={StaticResource StatusGlyph}}"
                                        FontFamily="Consolas,Menlo,monospace" Width="14"
                                        Foreground="{Binding Status, Converter={StaticResource StatusBrush}}"/>
+                            <TextBlock Text="{Binding Kind, Converter={StaticResource NodeKindGlyph}}"
+                                       Width="18"/>
                             <TextBlock Text="{Binding DisplayName}"
                                        TextWrapping="NoWrap"
                                        Foreground="{Binding Status, Converter={StaticResource StatusBrush}}"/>
