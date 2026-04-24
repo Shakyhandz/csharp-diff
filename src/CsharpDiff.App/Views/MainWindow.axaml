@@ -18,23 +18,9 @@
         <conv:NodeKindGlyphConverter x:Key="NodeKindGlyph"/>
     </Window.Resources>
 
-    <Grid RowDefinitions="Auto,Auto,*,Auto">
-        <!-- toolbar row 1 -->
-        <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,*,Auto,Auto,*,Auto" Margin="6,6,6,2">
-            <Button Grid.Column="0" Content="Left…" Click="OnPickLeft" Margin="0,0,4,0"/>
-            <TextBlock Grid.Column="1" Text="{Binding LeftFolder, FallbackValue='(no folder)'}"
-                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="380"/>
-            <Border Grid.Column="2" Width="8"/>
-            <Button Grid.Column="3" Content="Right…" Click="OnPickRight" Margin="0,0,4,0"/>
-            <TextBlock Grid.Column="4" Text="{Binding RightFolder, FallbackValue='(no folder)'}"
-                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="380"/>
-            <Border Grid.Column="5" Width="8"/>
-            <Button Grid.Column="6" Content="Compare" Click="OnCompare"
-                    IsEnabled="{Binding !Busy}"/>
-        </Grid>
-
+    <Grid RowDefinitions="Auto,*,Auto">
         <!-- options row -->
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="12" Margin="6,2,6,6">
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="12" Margin="6,6,6,6">
             <CheckBox Content="Ignore usings"      IsChecked="{Binding IgnoreUsings}"/>
             <CheckBox Content="Ignore whitespace"  IsChecked="{Binding IgnoreWhitespace}"/>
             <CheckBox Content="Ignore comments"    IsChecked="{Binding IgnoreComments}"/>
@@ -51,10 +37,12 @@
                     </DataTemplate>
                 </ComboBox.ItemTemplate>
             </ComboBox>
+            <Border Width="16"/>
+            <Button Content="Compare" Click="OnCompare" IsEnabled="{Binding !Busy}"/>
         </StackPanel>
 
         <!-- main -->
-        <Grid Grid.Row="2" ColumnDefinitions="320,4,*">
+        <Grid Grid.Row="1" ColumnDefinitions="320,4,*">
             <TreeView x:Name="Tree" Grid.Column="0"
                       ItemsSource="{Binding RootChildren}"
                       SelectionChanged="OnTreeSelectionChanged"
@@ -83,26 +71,42 @@
 
             <GridSplitter Grid.Column="1" ResizeDirection="Columns" Background="Gray"/>
 
-            <Grid Grid.Column="2" ColumnDefinitions="*,4,*" RowDefinitions="Auto,*">
+            <Grid Grid.Column="2" ColumnDefinitions="*,4,*" RowDefinitions="Auto,Auto,*">
+                <!-- folder pickers -->
+                <Border Grid.Row="0" Grid.Column="0" Padding="6,4" BorderThickness="0,0,0,1" BorderBrush="#40808080">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Button Content="Left…" Click="OnPickLeft"/>
+                        <TextBlock Text="{Binding LeftFolder, FallbackValue='(no folder)'}"
+                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Row="0" Grid.Column="2" Padding="6,4" BorderThickness="0,0,0,1" BorderBrush="#40808080">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Button Content="Right…" Click="OnPickRight"/>
+                        <TextBlock Text="{Binding RightFolder, FallbackValue='(no folder)'}"
+                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                </Border>
+
                 <!-- filename headers -->
-                <Border Grid.Row="0" Grid.Column="0" Padding="6,3" BorderThickness="0,0,0,1" BorderBrush="#40808080">
+                <Border Grid.Row="1" Grid.Column="0" Padding="6,3" BorderThickness="0,0,0,1" BorderBrush="#40808080">
                     <TextBlock x:Name="LeftHeader" Text="(no selection)"
                                FontFamily="Consolas,Menlo,monospace" FontSize="12"
                                TextTrimming="CharacterEllipsis"/>
                 </Border>
-                <Border Grid.Row="0" Grid.Column="2" Padding="6,3" BorderThickness="0,0,0,1" BorderBrush="#40808080">
+                <Border Grid.Row="1" Grid.Column="2" Padding="6,3" BorderThickness="0,0,0,1" BorderBrush="#40808080">
                     <TextBlock x:Name="RightHeader" Text="(no selection)"
                                FontFamily="Consolas,Menlo,monospace" FontSize="12"
                                TextTrimming="CharacterEllipsis"/>
                 </Border>
 
                 <!-- editors -->
-                <ae:TextEditor x:Name="LeftEditor" Grid.Row="1" Grid.Column="0"
+                <ae:TextEditor x:Name="LeftEditor" Grid.Row="2" Grid.Column="0"
                                IsReadOnly="True" ShowLineNumbers="True"
                                FontFamily="Consolas,Menlo,monospace" FontSize="13"
                                Background="White" Foreground="Black"/>
-                <GridSplitter Grid.Row="1" Grid.Column="1" ResizeDirection="Columns" Background="Gray"/>
-                <ae:TextEditor x:Name="RightEditor" Grid.Row="1" Grid.Column="2"
+                <GridSplitter Grid.Row="0" Grid.RowSpan="3" Grid.Column="1" ResizeDirection="Columns" Background="Gray"/>
+                <ae:TextEditor x:Name="RightEditor" Grid.Row="2" Grid.Column="2"
                                IsReadOnly="True" ShowLineNumbers="True"
                                FontFamily="Consolas,Menlo,monospace" FontSize="13"
                                Background="White" Foreground="Black"/>
@@ -110,7 +114,7 @@
         </Grid>
 
         <!-- status bar -->
-        <Border Grid.Row="3" BorderThickness="0,1,0,0" BorderBrush="#40808080" Padding="6,3">
+        <Border Grid.Row="2" BorderThickness="0,1,0,0" BorderBrush="#40808080" Padding="6,3">
             <TextBlock Text="{Binding Status, FallbackValue='Ready.'}"/>
         </Border>
     </Grid>

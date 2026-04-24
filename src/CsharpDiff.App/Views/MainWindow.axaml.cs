@@ -195,13 +195,14 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OnRecentSelected(object? sender, SelectionChangedEventArgs e)
+    private async void OnRecentSelected(object? sender, SelectionChangedEventArgs e)
     {
         if (sender is ComboBox cb && cb.SelectedItem is FolderPair pair
             && DataContext is MainWindowViewModel vm)
         {
             vm.UsePair(pair);
             cb.SelectedItem = null;
+            await vm.CompareAsync();
         }
     }
 
