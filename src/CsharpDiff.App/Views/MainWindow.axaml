@@ -7,11 +7,10 @@
         xmlns:ae="clr-namespace:AvaloniaEdit;assembly=AvaloniaEdit"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="700"
         x:Class="CsharpDiff.App.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="csharp-diff"
-        Width="1200" Height="700">
+		WindowState="Maximized">
 
     <Window.Resources>
         <conv:StatusGlyphConverter x:Key="StatusGlyph"/>
