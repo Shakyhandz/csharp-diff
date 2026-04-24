@@ -5,6 +5,7 @@ namespace CsharpDiff.Core;
 public enum NodeKind
 {
     Folder,
+    Project,
     File,
 }
 
