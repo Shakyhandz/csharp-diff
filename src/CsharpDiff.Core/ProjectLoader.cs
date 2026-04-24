@@ -37,23 +37,8 @@ public static class ProjectLoader
         return result;
     }
 
-    private static IEnumerable<string> EnumerateCsFiles(string root)
-    {
-        var stack = new Stack<string>();
-        stack.Push(root);
-        while (stack.Count > 0)
-        {
-            var dir = stack.Pop();
-            foreach (var sub in Directory.EnumerateDirectories(dir))
-            {
-                var name = Path.GetFileName(sub);
-                if (ExcludedDirs.Contains(name, StringComparer.OrdinalIgnoreCase)) continue;
-                stack.Push(sub);
-            }
-            foreach (var file in Directory.EnumerateFiles(dir, "*.cs"))
-                yield return file;
-        }
-    }
+    private static IEnumerable<string> EnumerateCsFiles(string root) =>
+        EnumerateFilesFiltered(root, "*.cs");
 
     private static IEnumerable<string> EnumerateFilesFiltered(string root, string pattern)
     {
