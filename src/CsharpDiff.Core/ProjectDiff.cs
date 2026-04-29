@@ -13,11 +13,21 @@ public static class ProjectDiff
     {
         options ??= DiffOptions.Default;
 
-        var leftTrees = ProjectLoader.LoadFolder(leftFolder);
-        var rightTrees = ProjectLoader.LoadFolder(rightFolder);
+        var includedExts = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+        if (options.IncludeCs) includedExts.Add(ProjectLoader.CsExt);
+        if (options.IncludeXaml)
+            foreach (var ext in ProjectLoader.XamlExtensions)
+                includedExts.Add(ext);
 
-        var leftFprints = leftTrees.Select(t => FingerprintBuilder.Build(t, leftFolder)).ToList();
-        var rightFprints = rightTrees.Select(t => FingerprintBuilder.Build(t, rightFolder)).ToList();
+        var leftFiles = ProjectLoader.LoadFiles(leftFolder, includedExts, options.IncludeOther);
+        var rightFiles = ProjectLoader.LoadFiles(rightFolder, includedExts, options.IncludeOther);
+
+        var leftFprints = leftFiles.Select(f => f.Tree is not null
+            ? FingerprintBuilder.Build(f.Tree, leftFolder)
+            : FingerprintBuilder.BuildPlain(f.AbsolutePath, leftFolder)).ToList();
+        var rightFprints = rightFiles.Select(f => f.Tree is not null
+            ? FingerprintBuilder.Build(f.Tree, rightFolder)
+            : FingerprintBuilder.BuildPlain(f.AbsolutePath, rightFolder)).ToList();
 
         var pairs = FileMatcher.Match(leftFprints, rightFprints);
 
@@ -103,10 +113,16 @@ public static class ProjectDiff
 
         if (pair.Left is null) node.Status = DiffStatus.Added;
         else if (pair.Right is null) node.Status = DiffStatus.Removed;
+        else if (pair.Left.Tree is { } lt && pair.Right.Tree is { } rt)
+        {
+            var ln = Normalizer.Normalize(lt.GetRoot(), options);
+            var rn = Normalizer.Normalize(rt.GetRoot(), options);
+            node.Status = ln == rn ? DiffStatus.Unchanged : DiffStatus.Modified;
+        }
         else
         {
-            var ln = Normalizer.Normalize(pair.Left.Tree.GetRoot(), options);
-            var rn = Normalizer.Normalize(pair.Right.Tree.GetRoot(), options);
+            var ln = NormalizePlainText(leftText ?? "", options);
+            var rn = NormalizePlainText(rightText ?? "", options);
             node.Status = ln == rn ? DiffStatus.Unchanged : DiffStatus.Modified;
         }
 
@@ -117,6 +133,21 @@ public static class ProjectDiff
     {
         try { return File.ReadAllText(path); }
         catch { return ""; }
+    }
+
+    private static string NormalizePlainText(string text, DiffOptions options)
+    {
+        if (!options.IgnoreWhitespace) return text;
+        var lines = text.Replace("\r\n", "\n").Split('\n');
+        var sb = new System.Text.StringBuilder();
+        foreach (var line in lines)
+        {
+            var trimmed = line.Trim();
+            if (trimmed.Length == 0) continue;
+            sb.Append(System.Text.RegularExpressions.Regex.Replace(trimmed, @"\s+", " "));
+            sb.Append('\n');
+        }
+        return sb.ToString();
     }
 
     private static DiffNode EnsureFolder(string relFolder, Dictionary<string, DiffNode> index, DiffNode root, HashSet<string> projectDirs)

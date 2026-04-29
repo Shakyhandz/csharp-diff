@@ -28,6 +28,13 @@
             <CheckBox Content="Normalize view"     IsChecked="{Binding NormalizeView}"
                       ToolTip.Tip="On: rewrites the file view to match ignore options (reformatted, no usings, etc). Off: shows original file content with highlights suppressed on ignored lines."/>
             <Border Width="16"/>
+            <TextBlock Text="Include:" VerticalAlignment="Center"/>
+            <CheckBox Content=".cs"     IsChecked="{Binding IncludeCs}"/>
+            <CheckBox Content=".xaml"   IsChecked="{Binding IncludeXaml}"
+                      ToolTip.Tip="Include .xaml and .axaml files (compared as plain text)."/>
+            <CheckBox Content="other(s)" IsChecked="{Binding IncludeOther}"
+                      ToolTip.Tip="Include all other file extensions (compared as plain text)."/>
+            <Border Width="16"/>
             <TextBlock Text="Recent:" VerticalAlignment="Center"/>
             <ComboBox ItemsSource="{Binding RecentPairs}" MinWidth="320"
                       SelectionChanged="OnRecentSelected">
@@ -86,7 +93,7 @@
                         <TextBlock Text="{Binding RightFolder, FallbackValue='(no folder)'}"
                                    VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                     </StackPanel>
-                </Border>
+                </Border> 
 
                 <!-- filename headers -->
                 <Border Grid.Row="1" Grid.Column="0" Padding="6,3" BorderThickness="0,0,0,1" BorderBrush="#40808080">

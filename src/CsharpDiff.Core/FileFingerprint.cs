@@ -9,7 +9,8 @@ public sealed class FileFingerprint
 {
     public required string AbsolutePath { get; init; }
     public required string RelativePath { get; init; }
-    public required SyntaxTree Tree { get; init; }
+    public required string Extension { get; init; }
+    public SyntaxTree? Tree { get; init; }
     public required HashSet<string> Symbols { get; init; }
 }
 
@@ -25,8 +26,21 @@ public static class FingerprintBuilder
         {
             AbsolutePath = abs,
             RelativePath = rel,
+            Extension = Path.GetExtension(abs),
             Tree = tree,
             Symbols = symbols,
+        };
+    }
+
+    public static FileFingerprint BuildPlain(string absolutePath, string rootFolder)
+    {
+        return new FileFingerprint
+        {
+            AbsolutePath = absolutePath,
+            RelativePath = Path.GetRelativePath(rootFolder, absolutePath),
+            Extension = Path.GetExtension(absolutePath),
+            Tree = null,
+            Symbols = new HashSet<string>(System.StringComparer.Ordinal),
         };
     }
 

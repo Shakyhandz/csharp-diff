@@ -20,6 +20,10 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private bool _changesOnly;
     [ObservableProperty] private bool _normalizeView = true;
 
+    [ObservableProperty] private bool _includeCs = true;
+    [ObservableProperty] private bool _includeXaml = true;
+    [ObservableProperty] private bool _includeOther;
+
     private DiffNode? _selectedNode;
     public DiffNode? SelectedNode
     {
@@ -48,6 +52,9 @@ public partial class MainWindowViewModel : ViewModelBase
     partial void OnIgnoreUsingsChanged(bool value) => _ = RecomputeIfReadyAsync();
     partial void OnIgnoreWhitespaceChanged(bool value) => _ = RecomputeIfReadyAsync();
     partial void OnIgnoreCommentsChanged(bool value) => _ = RecomputeIfReadyAsync();
+    partial void OnIncludeCsChanged(bool value) => _ = RecomputeIfReadyAsync();
+    partial void OnIncludeXamlChanged(bool value) => _ = RecomputeIfReadyAsync();
+    partial void OnIncludeOtherChanged(bool value) => _ = RecomputeIfReadyAsync();
 
     private Task RecomputeIfReadyAsync() =>
         _rawRoot is null ? Task.CompletedTask : CompareAsync();
@@ -69,7 +76,10 @@ public partial class MainWindowViewModel : ViewModelBase
             var options = new DiffOptions(
                 IgnoreUsings: IgnoreUsings,
                 IgnoreWhitespace: IgnoreWhitespace,
-                IgnoreComments: IgnoreComments);
+                IgnoreComments: IgnoreComments,
+                IncludeCs: IncludeCs,
+                IncludeXaml: IncludeXaml,
+                IncludeOther: IncludeOther);
 
             _rawRoot = await Task.Run(() => ProjectDiff.Compare(left, right, options));
             RefreshFilteredTree();

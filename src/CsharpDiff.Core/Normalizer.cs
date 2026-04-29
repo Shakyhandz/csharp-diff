@@ -7,7 +7,10 @@ namespace CsharpDiff.Core;
 public sealed record DiffOptions(
     bool IgnoreUsings = true,
     bool IgnoreWhitespace = true,
-    bool IgnoreComments = true)
+    bool IgnoreComments = true,
+    bool IncludeCs = true,
+    bool IncludeXaml = true,
+    bool IncludeOther = false)
 {
     public static DiffOptions Default { get; } = new();
 }

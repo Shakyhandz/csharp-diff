@@ -39,6 +39,8 @@ public static class FileMatcher
         foreach (var l in remainingLeft)
             foreach (var r in remainingRight)
             {
+                if (!string.Equals(l.Extension, r.Extension, System.StringComparison.OrdinalIgnoreCase))
+                    continue;
                 var score = Jaccard(l.Symbols, r.Symbols);
                 if (score > 0) candidates.Add((score, l, r));
             }
@@ -69,6 +71,7 @@ public static class FileMatcher
         {
             var leftName = Path.GetFileName(l.AbsolutePath);
             var hit = unmatchedRight.FirstOrDefault(r =>
+                string.Equals(r.Extension, l.Extension, System.StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(Path.GetFileName(r.AbsolutePath), leftName, System.StringComparison.OrdinalIgnoreCase));
             if (hit is not null)
             {
