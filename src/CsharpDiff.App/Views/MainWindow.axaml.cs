@@ -170,6 +170,27 @@ public partial class MainWindow : Window
         _rightMargin.SetMap(result.RightLineNumbers);
         leftEditor.TextArea.TextView.InvalidateVisual();
         rightEditor.TextArea.TextView.InvalidateVisual();
+
+        var firstDiff = FindFirstDiffLine(result.LeftMarks, result.RightMarks);
+
+        var scrollTo = firstDiff > 3 
+                       ? firstDiff - 2 
+                       : 1;
+
+        leftEditor.ScrollToLine(scrollTo);
+        rightEditor.ScrollToLine(scrollTo);
+    }
+
+    private static int FindFirstDiffLine(System.Collections.Generic.IReadOnlyList<LineMark> left, System.Collections.Generic.IReadOnlyList<LineMark> right)
+    {
+        var max = System.Math.Max(left.Count, right.Count);
+        for (var i = 0; i < max; i++)
+        {
+            var l = i < left.Count ? left[i] : LineMark.None;
+            var r = i < right.Count ? right[i] : LineMark.None;
+            if (l != LineMark.None || r != LineMark.None) return i + 1;
+        }
+        return 0;
     }
 
     private async void OnPickLeft(object? sender, RoutedEventArgs e)
