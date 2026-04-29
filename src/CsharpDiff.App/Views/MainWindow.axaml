@@ -46,6 +46,11 @@
             </ComboBox>
             <Border Width="16"/>
             <Button Content="Compare" Click="OnCompare" IsEnabled="{Binding !Busy}"/>
+            <Border Width="16"/>
+            <Button Content="▲" Click="OnPrevDiff" ToolTip.Tip="Previous diff"
+                    Padding="8,2" MinWidth="28"/>
+            <Button Content="▼" Click="OnNextDiff" ToolTip.Tip="Next diff"
+                    Padding="8,2" MinWidth="28"/>
         </StackPanel>
 
         <!-- main -->

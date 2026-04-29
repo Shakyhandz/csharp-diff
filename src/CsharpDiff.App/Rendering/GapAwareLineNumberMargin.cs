@@ -14,12 +14,16 @@ public sealed class GapAwareLineNumberMargin : AbstractMargin
 {
     private IReadOnlyList<int> _rowToOrig = System.Array.Empty<int>();
     private Typeface _typeface;
+    private Typeface _boldTypeface;
     private double _emSize = 12;
     private int _maxDigits = 1;
+    private int _highlightStartRow = -1;
+    private int _highlightEndRow = -1;
 
     public GapAwareLineNumberMargin()
     {
         _typeface = new Typeface("Consolas");
+        _boldTypeface = new Typeface("Consolas", FontStyle.Normal, FontWeight.Bold);
     }
 
     public void SetMap(IReadOnlyList<int> rowToOriginalLineNumber)
@@ -36,13 +40,22 @@ public sealed class GapAwareLineNumberMargin : AbstractMargin
         InvalidateVisual();
     }
 
+    public void SetHighlightRows(int startRow, int endRow)
+    {
+        _highlightStartRow = startRow;
+        _highlightEndRow = endRow;
+        InvalidateVisual();
+    }
+
     protected override void OnTextViewChanged(TextView? oldTextView, TextView? newTextView)
     {
         if (oldTextView != null) oldTextView.VisualLinesChanged -= OnVisualLinesChanged;
         if (newTextView != null)
         {
             newTextView.VisualLinesChanged += OnVisualLinesChanged;
-            _typeface = new Typeface(newTextView.GetValue(TextElement.FontFamilyProperty));
+            var family = newTextView.GetValue(TextElement.FontFamilyProperty);
+            _typeface = new Typeface(family);
+            _boldTypeface = new Typeface(family, FontStyle.Normal, FontWeight.Bold);
             _emSize = newTextView.GetValue(TextElement.FontSizeProperty);
         }
         base.OnTextViewChanged(oldTextView, newTextView);
@@ -70,13 +83,17 @@ public sealed class GapAwareLineNumberMargin : AbstractMargin
             if (idx < 0 || idx >= _rowToOrig.Count) continue;
             var orig = _rowToOrig[idx];
             if (orig <= 0) continue;
+            var row = idx + 1;
+            var highlighted = _highlightStartRow > 0
+                              && row >= _highlightStartRow
+                              && row <= _highlightEndRow;
             var ft = new FormattedText(
                 orig.ToString(CultureInfo.InvariantCulture),
                 CultureInfo.InvariantCulture,
                 FlowDirection.LeftToRight,
-                _typeface,
+                highlighted ? _boldTypeface : _typeface,
                 _emSize,
-                foreground);
+                highlighted ? Brushes.Red : foreground);
             var y = vl.VisualTop - tv.VerticalOffset;
             var x = Bounds.Width - ft.Width - 2;
             context.DrawText(ft, new Point(x, y));

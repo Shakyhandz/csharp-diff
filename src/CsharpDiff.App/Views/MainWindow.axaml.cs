@@ -26,6 +26,8 @@ public partial class MainWindow : Window
     private ScrollViewer? _rightSv;
 
     private DiffNode? _currentNode;
+    private System.Collections.Generic.List<int> _diffStartLines = new();
+    private System.Collections.Generic.List<int> _diffEndLines = new();
 
     public MainWindow()
     {
@@ -123,6 +125,10 @@ public partial class MainWindow : Window
             _rightMargin.SetMap(System.Array.Empty<int>());
             leftEditor.TextArea.TextView.InvalidateVisual();
             rightEditor.TextArea.TextView.InvalidateVisual();
+            _diffStartLines.Clear();
+            _diffEndLines.Clear();
+            _leftMargin.SetHighlightRows(-1, -1);
+            _rightMargin.SetHighlightRows(-1, -1);
             return;
         }
 
@@ -171,26 +177,93 @@ public partial class MainWindow : Window
         leftEditor.TextArea.TextView.InvalidateVisual();
         rightEditor.TextArea.TextView.InvalidateVisual();
 
-        var firstDiff = FindFirstDiffLine(result.LeftMarks, result.RightMarks);
+        ComputeDiffBlocks(result.LeftMarks, result.RightMarks, _diffStartLines, _diffEndLines);
 
-        var scrollTo = firstDiff > 3 
-                       ? firstDiff - 2 
-                       : 1;
-
-        leftEditor.ScrollToLine(scrollTo);
-        rightEditor.ScrollToLine(scrollTo);
+        if (_diffStartLines.Count > 0)
+        {
+            var firstDiff = _diffStartLines[0];
+            var scrollTo = firstDiff > 3 ? firstDiff - 2 : 1;
+            leftEditor.ScrollToLine(scrollTo);
+            rightEditor.ScrollToLine(scrollTo);
+            HighlightCurrentBlock(0);
+        }
+        else
+        {
+            leftEditor.ScrollToLine(1);
+            rightEditor.ScrollToLine(1);
+            _leftMargin.SetHighlightRows(-1, -1);
+            _rightMargin.SetHighlightRows(-1, -1);
+        }
     }
 
-    private static int FindFirstDiffLine(System.Collections.Generic.IReadOnlyList<LineMark> left, System.Collections.Generic.IReadOnlyList<LineMark> right)
+    private static void ComputeDiffBlocks(
+        System.Collections.Generic.IReadOnlyList<LineMark> left,
+        System.Collections.Generic.IReadOnlyList<LineMark> right,
+        System.Collections.Generic.List<int> starts,
+        System.Collections.Generic.List<int> ends)
     {
+        starts.Clear();
+        ends.Clear();
         var max = System.Math.Max(left.Count, right.Count);
+        var inBlock = false;
         for (var i = 0; i < max; i++)
         {
             var l = i < left.Count ? left[i] : LineMark.None;
             var r = i < right.Count ? right[i] : LineMark.None;
-            if (l != LineMark.None || r != LineMark.None) return i + 1;
+            var diff = l != LineMark.None || r != LineMark.None;
+            if (diff && !inBlock) starts.Add(i + 1);
+            if (!diff && inBlock) ends.Add(i);
+            inBlock = diff;
         }
-        return 0;
+        if (inBlock) ends.Add(max);
+    }
+
+    private void HighlightCurrentBlock(int index)
+    {
+        if (index < 0 || index >= _diffStartLines.Count)
+        {
+            _leftMargin.SetHighlightRows(-1, -1);
+            _rightMargin.SetHighlightRows(-1, -1);
+            return;
+        }
+        var start = _diffStartLines[index];
+        var end = _diffEndLines[index];
+        _leftMargin.SetHighlightRows(start, end);
+        _rightMargin.SetHighlightRows(start, end);
+    }
+
+    private void OnPrevDiff(object? sender, RoutedEventArgs e) => JumpDiff(forward: false);
+    private void OnNextDiff(object? sender, RoutedEventArgs e) => JumpDiff(forward: true);
+
+    private void JumpDiff(bool forward)
+    {
+        if (_diffStartLines.Count == 0) return;
+        var leftEditor = this.FindControl<TextEditor>("LeftEditor")!;
+        var rightEditor = this.FindControl<TextEditor>("RightEditor")!;
+        var current = leftEditor.TextArea.Caret.Line;
+
+        int targetIndex;
+        if (forward)
+        {
+            targetIndex = -1;
+            for (var i = 0; i < _diffStartLines.Count; i++)
+                if (_diffStartLines[i] > current) { targetIndex = i; break; }
+            if (targetIndex < 0) targetIndex = 0;
+        }
+        else
+        {
+            targetIndex = -1;
+            for (var i = _diffStartLines.Count - 1; i >= 0; i--)
+                if (_diffStartLines[i] < current) { targetIndex = i; break; }
+            if (targetIndex < 0) targetIndex = _diffStartLines.Count - 1;
+        }
+
+        var target = _diffStartLines[targetIndex];
+        leftEditor.TextArea.Caret.Line = target;
+        var scrollTo = target > 3 ? target - 2 : 1;
+        leftEditor.ScrollToLine(scrollTo);
+        rightEditor.ScrollToLine(scrollTo);
+        HighlightCurrentBlock(targetIndex);
     }
 
     private async void OnPickLeft(object? sender, RoutedEventArgs e)
